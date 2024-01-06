@@ -2,7 +2,10 @@ module go.loafoe.dev/modproxy
 
 go 1.21.5
 
-require github.com/GoogleCloudPlatform/functions-framework-go v1.8.0
+require (
+	github.com/GoogleCloudPlatform/functions-framework-go v1.8.0
+	golang.org/x/net v0.10.0
+)
 
 require (
 	cloud.google.com/go/functions v1.15.1 // indirect
