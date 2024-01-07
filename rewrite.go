@@ -49,5 +49,10 @@ func RewriteURL(originalURL string, cfg *Config) (string, error) {
 	copy.Host = strings.Replace(copy.Host, cfg.HostPattern, cfg.HostReplacement, 1)
 	copy.Path = strings.Replace(copy.Path, cfg.PathPattern, cfg.PathReplacement, 1)
 
+	// Remove ?go-get=1 from the go get request
+	query := copy.Query()
+	query.Del("go-get")
+	copy.RawQuery = query.Encode()
+
 	return copy.String(), nil // Return the modified URL as a string.
 }

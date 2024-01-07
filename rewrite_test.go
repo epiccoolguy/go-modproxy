@@ -79,6 +79,19 @@ var rewriteURLTestCases = []RewriteURLTestCase{
 		expectedRewrittenURL: "https://github.com/package",
 	},
 	{
+		name:        "Remove ?go-get=1",
+		originalURL: "http://go.loafoe.dev/modproxy?go-get=1",
+		cfg: &Config{
+			SchemePattern:     "http",
+			SchemeReplacement: "https",
+			HostPattern:       "go.loafoe.dev",
+			HostReplacement:   "github.com",
+			PathPattern:       "/",
+			PathReplacement:   "/loafoe-dev/go-",
+		},
+		expectedRewrittenURL: "https://github.com/loafoe-dev/go-modproxy",
+	},
+	{
 		name:        "Malformed URL",
 		originalURL: "http://%42:8080/", // Malformed URL
 		cfg: &Config{
