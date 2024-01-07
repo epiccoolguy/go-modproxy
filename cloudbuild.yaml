@@ -1,0 +1,18 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+  pool: {}
+projectId: $PROJECT_ID
+steps:
+  - name: buildpacksio/pack:latest
+    entrypoint: pack
+    args:
+      - build
+      - $_REPOSITORY_URI:$COMMIT_SHA
+      - --builder
+      - gcr.io/buildpacks/builder:v1
+      - --env
+      - GOOGLE_FUNCTION_SIGNATURE_TYPE=http
+      - --env
+      - GOOGLE_FUNCTION_TARGET=ModProxy
+images:
+  - $_REPOSITORY_URI:$COMMIT_SHA
