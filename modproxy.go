@@ -17,7 +17,7 @@ type PackagePathGetter interface {
 }
 
 type URLRewriter interface {
-	RewriteURL(originalURL, hostPattern, hostReplacement, pathPattern, pathReplacement string) (string, error)
+	RewriteURL(originalURL string, cfg *Config) (string, error)
 }
 
 // Concrete implementations
@@ -33,8 +33,8 @@ func (DefaultPackagePathGetter) GetPackagePath(url string) (string, error) {
 	return GetPackagePath(url)
 }
 
-func (DefaultURLRewriter) RewriteURL(originalURL, hostPattern, hostReplacement, pathPattern, pathReplacement string) (string, error) {
-	return RewriteURL(originalURL, hostPattern, hostReplacement, pathPattern, pathReplacement)
+func (DefaultURLRewriter) RewriteURL(originalURL string, cfg *Config) (string, error) {
+	return RewriteURL(originalURL, cfg)
 }
 
 // Compile-time check to ensure default implementations correctly implement interfaces
@@ -84,7 +84,7 @@ func ModProxy(cfg *Config, urlGetter RequestURLGetter, pathGetter PackagePathGet
 	}
 
 	// Rewrite the URL based on the patterns and replacements.
-	rewrittenURL, err := urlRewriter.RewriteURL(originalURL, cfg.HostPattern, cfg.HostReplacement, cfg.PathPattern, cfg.PathReplacement)
+	rewrittenURL, err := urlRewriter.RewriteURL(originalURL, cfg)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return

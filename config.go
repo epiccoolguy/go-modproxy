@@ -4,18 +4,22 @@ import "os"
 
 // Config holds the configuration for ModProxy.
 type Config struct {
-	HostPattern     string
-	HostReplacement string
-	PathPattern     string
-	PathReplacement string
+	SchemePattern     string
+	SchemeReplacement string
+	HostPattern       string
+	HostReplacement   string
+	PathPattern       string
+	PathReplacement   string
 }
 
 // Constants for default pattern and replacement values.
 const (
-	DefaultHostPattern     = "go.loafoe.dev"   // Default pattern for host matching.
-	DefaultHostReplacement = "github.com"      // Default host replacement.
-	DefaultPathPattern     = "/"               // Default pattern for path matching.
-	DefaultPathReplacement = "/loafoe-dev/go-" // Default path replacement.
+	DefaultSchemePattern     = "http"
+	DefaultSchemeReplacement = "https"
+	DefaultHostPattern       = "go.loafoe.dev"
+	DefaultHostReplacement   = "github.com"
+	DefaultPathPattern       = "/"
+	DefaultPathReplacement   = "/loafoe-dev/go-"
 )
 
 // getEnvOrDefault retrieves an environment variable by key.
@@ -28,22 +32,14 @@ func getEnvOrDefault(key, defaultValue string) string {
 	return value
 }
 
-// NewConfig creates a new instance of Config with provided values.
-func NewConfig(hostPattern, hostReplacement, pathPattern, pathReplacement string) *Config {
-	return &Config{
-		HostPattern:     hostPattern,
-		HostReplacement: hostReplacement,
-		PathPattern:     pathPattern,
-		PathReplacement: pathReplacement,
-	}
-}
-
 // NewConfigFromEnvironment creates a new instance of Config with values from environment variables or default values.
 func NewConfigFromEnvironment() *Config {
-	return NewConfig(
-		getEnvOrDefault("HOST_PATTERN", DefaultHostPattern),
-		getEnvOrDefault("HOST_REPLACEMENT", DefaultHostReplacement),
-		getEnvOrDefault("PATH_PATTERN", DefaultPathPattern),
-		getEnvOrDefault("PATH_REPLACEMENT", DefaultPathReplacement),
-	)
+	return &Config{
+		SchemePattern:     getEnvOrDefault("SCHEME_PATTERN", DefaultSchemePattern),
+		SchemeReplacement: getEnvOrDefault("SCHEME_REPLACEMENT", DefaultSchemeReplacement),
+		HostPattern:       getEnvOrDefault("HOST_PATTERN", DefaultHostPattern),
+		HostReplacement:   getEnvOrDefault("HOST_REPLACEMENT", DefaultHostReplacement),
+		PathPattern:       getEnvOrDefault("PATH_PATTERN", DefaultPathPattern),
+		PathReplacement:   getEnvOrDefault("PATH_REPLACEMENT", DefaultPathReplacement),
+	}
 }

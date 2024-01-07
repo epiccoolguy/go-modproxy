@@ -29,7 +29,7 @@ type mockPackagePathGetter struct {
 }
 
 type mockURLRewriter struct {
-	mockFunc func(originalURL, hostPattern, hostReplacement, pathPattern, pathReplacement string) (string, error)
+	mockFunc func(originalURL string, cfg *Config) (string, error)
 }
 
 type mockRequestURLGetter struct {
@@ -40,8 +40,8 @@ func (m mockPackagePathGetter) GetPackagePath(url string) (string, error) {
 	return m.mockFunc(url)
 }
 
-func (m mockURLRewriter) RewriteURL(originalURL, hostPattern, hostReplacement, pathPattern, pathReplacement string) (string, error) {
-	return m.mockFunc(originalURL, hostPattern, hostReplacement, pathPattern, pathReplacement)
+func (m mockURLRewriter) RewriteURL(originalURL string, cfg *Config) (string, error) {
+	return m.mockFunc(originalURL, cfg)
 }
 
 func (m mockRequestURLGetter) GetRequestURL(r *http.Request) string {
@@ -92,7 +92,7 @@ var modProxyTestCases = []ModProxyTestCase{
 			PathReplacement: "/loafoe-dev/go-",
 		},
 		mockURLRewriter: &mockURLRewriter{
-			mockFunc: func(originalURL, hostPattern, hostReplacement, pathPattern, pathReplacement string) (string, error) {
+			mockFunc: func(originalURL string, cfg *Config) (string, error) {
 				return "", errors.New("mock error")
 			},
 		},

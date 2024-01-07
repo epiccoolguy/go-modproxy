@@ -23,10 +23,7 @@ type GetPackagePathTestCase struct {
 type RewriteURLTestCase struct {
 	name                 string
 	originalURL          string
-	hostPattern          string
-	hostReplacement      string
-	pathPattern          string
-	pathReplacement      string
+	cfg                  *Config
 	expectedRewrittenURL string
 	expectError          bool
 }
@@ -69,22 +66,30 @@ var getPackagePathTestCases = []GetPackagePathTestCase{
 
 var rewriteURLTestCases = []RewriteURLTestCase{
 	{
-		name:                 "Default host and path rewrite",
-		originalURL:          "http://go.loafoe.dev/package",
-		hostPattern:          "go.loafoe.dev",
-		hostReplacement:      "github.com",
-		pathPattern:          "/",
-		pathReplacement:      "/",
-		expectedRewrittenURL: "http://github.com/package",
+		name:        "Default host and path rewrite",
+		originalURL: "http://go.loafoe.dev/package",
+		cfg: &Config{
+			SchemePattern:     "http",
+			SchemeReplacement: "https",
+			HostPattern:       "go.loafoe.dev",
+			HostReplacement:   "github.com",
+			PathPattern:       "/",
+			PathReplacement:   "/",
+		},
+		expectedRewrittenURL: "https://github.com/package",
 	},
 	{
-		name:            "Malformed URL",
-		originalURL:     "http://%42:8080/", // Malformed URL
-		hostPattern:     "go.loafoe.dev",
-		hostReplacement: "github.com",
-		pathPattern:     "/",
-		pathReplacement: "/",
-		expectError:     true,
+		name:        "Malformed URL",
+		originalURL: "http://%42:8080/", // Malformed URL
+		cfg: &Config{
+			SchemePattern:     "http",
+			SchemeReplacement: "https",
+			HostPattern:       "go.loafoe.dev",
+			HostReplacement:   "github.com",
+			PathPattern:       "/",
+			PathReplacement:   "/",
+		},
+		expectError: true,
 	},
 }
 
@@ -121,7 +126,7 @@ func TestGetPackagePath(t *testing.T) {
 func TestRewriteURL(t *testing.T) {
 	for _, tc := range rewriteURLTestCases {
 		t.Run(tc.name, func(t *testing.T) {
-			rewrittenURL, err := RewriteURL(tc.originalURL, tc.hostPattern, tc.hostReplacement, tc.pathPattern, tc.pathReplacement)
+			rewrittenURL, err := RewriteURL(tc.originalURL, tc.cfg)
 
 			if (err != nil) != tc.expectError {
 				t.Errorf("RewriteURL() error = %v, expectError %v", err, tc.expectError)

@@ -37,16 +37,17 @@ func GetPackagePath(r string) (string, error) {
 	return packagePath, nil
 }
 
-// RewriteURL rewrites a given URL based on the provided patterns and replacements.
-func RewriteURL(originalURL, hostPattern, hostReplacement, pathPattern, pathReplacement string) (string, error) {
+// RewriteURL rewrites a given URL based on the provided patterns and replacements configuration.
+func RewriteURL(originalURL string, cfg *Config) (string, error) {
 	copy, err := url.Parse(originalURL)
 	if err != nil {
 		return "", err
 	}
 
-	// Replace the host and path according to the specified patterns and replacements.
-	copy.Host = strings.Replace(copy.Host, hostPattern, hostReplacement, 1)
-	copy.Path = strings.Replace(copy.Path, pathPattern, pathReplacement, 1)
+	// Replace parts of the URL according to the specified patterns and replacements.
+	copy.Scheme = strings.Replace(copy.Scheme, cfg.SchemePattern, cfg.SchemeReplacement, 1)
+	copy.Host = strings.Replace(copy.Host, cfg.HostPattern, cfg.HostReplacement, 1)
+	copy.Path = strings.Replace(copy.Path, cfg.PathPattern, cfg.PathReplacement, 1)
 
 	return copy.String(), nil // Return the modified URL as a string.
 }

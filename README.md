@@ -24,7 +24,7 @@ Confirm the url is correctly being rewritten:
 
 ```sh
 curl -H 'Host: go.loafoe.dev' localhost:8080/modproxy
-# Output: <html><head><meta name="go-import" content="go.loafoe.dev/modproxy git http://github.com/loafoe-dev/go-modproxy"></head><body></body></html>
+# Output: <html><head><meta name="go-import" content="go.loafoe.dev/modproxy git https://github.com/loafoe-dev/go-modproxy"></head><body></body></html>
 ```
 
 ## Run using `pack` and Docker
@@ -50,7 +50,7 @@ Confirm the url is correctly being rewritten:
 
 ```sh
 curl -H 'Host: go.loafoe.dev' localhost:8080/modproxy
-# Output: <html><head><meta name="go-import" content="go.loafoe.dev/modproxy git http://github.com/loafoe-dev/go-modproxy"></head><body></body></html>
+# Output: <html><head><meta name="go-import" content="go.loafoe.dev/modproxy git https://github.com/loafoe-dev/go-modproxy"></head><body></body></html>
 ```
 
 ## Run using Google Cloud Platform
