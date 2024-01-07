@@ -52,3 +52,73 @@ Confirm the url is correctly being rewritten:
 curl -H 'Host: go.loafoe.dev' localhost:8080/modproxy
 # Output: <html><head><meta name="go-import" content="go.loafoe.dev/modproxy git http://github.com/loafoe-dev/go-modproxy"></head><body></body></html>
 ```
+
+## Run using Google Cloud Platform
+
+```sh
+SERVICE="go-modproxy"
+REGION="europe-west4"
+BUILD_REGION="europe-west1" # https://cloud.google.com/build/docs/locations#restricted_regions_for_some_projects
+BILLING_ACCOUNT_ID=$(gcloud billing accounts list --filter="OPEN = True" --format="value(ACCOUNT_ID)") # use first enabled billing account
+PROJECT_ID="go-modproxy"
+CLOUDBUILD_BUCKET="gs://${PROJECT_ID}_cloudbuild"
+ARTIFACTS_REPOSITORY="cloud-run-source-deploy"
+REPOSITORY_URI=$REGION-docker.pkg.dev/$PROJECT_ID/$ARTIFACTS_REPOSITORY/$SERVICE
+
+# Create new GCP project
+gcloud projects create "$PROJECT_ID"
+
+# Link billing account
+gcloud billing projects link "$PROJECT_ID" --billing-account="$BILLING_ACCOUNT_ID"
+
+# Enable required GCP services
+gcloud services enable artifactregistry.googleapis.com cloudbuild.googleapis.com run.googleapis.com --project="$PROJECT_ID"
+
+# Create GCS bucket for builds
+gcloud storage buckets create "$CLOUDBUILD_BUCKET" --location="$REGION" --project="$PROJECT_ID"
+
+# Create Docker artifact repository
+gcloud artifacts repositories create "$ARTIFACTS_REPOSITORY" --repository-format=docker --location="$REGION" --project="$PROJECT_ID"
+
+# Submit build to Cloud Build
+gcloud builds submit . --config cloudbuild.yaml --substitutions=_REPOSITORY_URI=$REPOSITORY_URI,COMMIT_SHA=$(git rev-parse HEAD) --region="$BUILD_REGION" --project="$PROJECT_ID"
+
+# Deploy service to Cloud Run
+gcloud run deploy "$SERVICE" --image="$REPOSITORY_URI:$(git rev-parse HEAD)" --no-allow-unauthenticated --region="$REGION" --project="$PROJECT_ID"
+```
+
+Enable unauthenticated invocations in an organisation enforcing DRS using Resource Manager tags and a conditional DRS policy:
+
+```sh
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")
+ORGANIZATION_ID=$(gcloud projects describe "$PROJECT_ID" --format="value(parent.id)")
+
+gcloud resource-manager tags bindings create \
+  --tag-value="$ORGANIZATION_ID/allUsersIngress/True" \
+  --parent="//run.googleapis.com/projects/$PROJECT_NUMBER/locations/$REGION/services/$SERVICE" \
+  --location=$REGION
+
+# This can fail until the binding has propagated
+gcloud run services add-iam-policy-binding "$SERVICE" \
+  --member="allUsers" \
+  --role="roles/run.invoker" \
+  --region="$REGION" \
+  --project="$PROJECT_ID"
+```
+
+---
+
+Map the Cloud Run instance to a custom domain:
+
+```sh
+DOMAIN="go.loafoe.dev"
+
+# It can take up to 30 minutes for Cloud Run to issue provision a certificate and route
+gcloud beta run domain-mappings create --service="$SERVICE" --domain="$DOMAIN" --region="$REGION" --project="$PROJECT_ID"
+```
+
+Retrieve the necessary DNS record information for the domain mappings:
+
+```sh
+gcloud beta run domain-mappings describe --domain="$DOMAIN" --region="$REGION" --project="$PROJECT_ID"
+```
