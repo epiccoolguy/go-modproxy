@@ -58,6 +58,11 @@ var getPackagePathTestCases = []GetPackagePathTestCase{
 		expectedPath: "example.com/path",
 	},
 	{
+		name:         "Remove /vX suffix",
+		url:          "https://example.com/path/v2",
+		expectedPath: "example.com/path",
+	},
+	{
 		name:        "Malformed URL",
 		url:         "http://a b.com/", // Malformed URL
 		expectError: true,
@@ -90,6 +95,19 @@ var rewriteURLTestCases = []RewriteURLTestCase{
 			PathReplacement:   "/loafoe-dev/go-",
 		},
 		expectedRewrittenURL: "https://github.com/loafoe-dev/go-modproxy",
+	},
+	{
+		name:        "Remove /vX suffix",
+		originalURL: "http://go.loafoe.dev/bitfield/v2",
+		cfg: &Config{
+			SchemePattern:     "http",
+			SchemeReplacement: "https",
+			HostPattern:       "go.loafoe.dev",
+			HostReplacement:   "github.com",
+			PathPattern:       "/",
+			PathReplacement:   "/loafoe-dev/go-",
+		},
+		expectedRewrittenURL: "https://github.com/loafoe-dev/go-bitfield",
 	},
 	{
 		name:        "Malformed URL",

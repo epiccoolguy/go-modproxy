@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 )
 
@@ -23,6 +24,11 @@ func GetRequestURL(r *http.Request) string {
 	return fmt.Sprintf("%s://%s%s", scheme, host, r.URL.RequestURI())
 }
 
+func removeVersionSuffix(path string) string {
+	re := regexp.MustCompile(`/v(\d+)$`)
+	return re.ReplaceAllString(path, "")
+}
+
 // GetPackagePath extracts the host and path from the request URL,
 // omitting the scheme. This is used for the go-import meta tag.
 func GetPackagePath(r string) (string, error) {
@@ -31,6 +37,9 @@ func GetPackagePath(r string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	// Remove any /vX suffix from the path
+	parsedURL.Path = removeVersionSuffix(parsedURL.Path)
 
 	// Concatenate the host and path
 	packagePath := fmt.Sprintf("%s%s", parsedURL.Host, parsedURL.Path)
@@ -48,6 +57,9 @@ func RewriteURL(originalURL string, cfg *Config) (string, error) {
 	copy.Scheme = strings.Replace(copy.Scheme, cfg.SchemePattern, cfg.SchemeReplacement, 1)
 	copy.Host = strings.Replace(copy.Host, cfg.HostPattern, cfg.HostReplacement, 1)
 	copy.Path = strings.Replace(copy.Path, cfg.PathPattern, cfg.PathReplacement, 1)
+
+	// Remove any /vX suffix from the path
+	copy.Path = removeVersionSuffix(copy.Path)
 
 	// Remove ?go-get=1 from the go get request
 	query := copy.Query()
