@@ -77,5 +77,6 @@ jobs:
           echo "${{ steps.meta.outputs.tags }}" | while read tag
           do
             docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} $tag
-            docker push $tag
           done
+          docker rmi ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} --all-tags
