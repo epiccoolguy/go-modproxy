@@ -2,8 +2,8 @@ name: CD
 
 on:
   workflow_run:
-    workflows: ["CI"]
-    branches: [master]
+    workflows: [CI]
+    branches: [add-cd]
     types:
       - completed
 
