@@ -19,6 +19,7 @@ jobs:
     permissions:
       contents: "read"
       packages: write
+      id-token: "write"
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -38,3 +39,14 @@ jobs:
 
       - name: Push latest image
         run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Log into Google Cloud Platform
+        uses: "google-github-actions/auth@v2"
+        with:
+          project_id: "go-modproxy"
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+
+      - name: "Set up Google Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@v2"
+        with:
+          version: ">= 461.0.0"
