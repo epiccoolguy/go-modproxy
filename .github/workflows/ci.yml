@@ -67,9 +67,9 @@ jobs:
 
       - name: Build and tag images
         run: |
-          pack build ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          --tag ${{ steps.meta.outputs.tags }}
-          --builder gcr.io/buildpacks/builder:v1
-          --env GOOGLE_FUNCTION_SIGNATURE_TYPE=http
-          --env GOOGLE_FUNCTION_TARGET=ModProxy
-          --publish
+          pack build ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --tag ${{ steps.meta.outputs.tags }} \
+            --builder gcr.io/buildpacks/builder:v1 \
+            --env GOOGLE_FUNCTION_SIGNATURE_TYPE=http \
+            --env GOOGLE_FUNCTION_TARGET=ModProxy \
+            --publish
