@@ -34,7 +34,7 @@ jobs:
   package:
     name: Build and push image
     runs-on: ubuntu-latest
-    needs: [build, test]
+    needs: build_and_test
     permissions:
       contents: read
       packages: write
