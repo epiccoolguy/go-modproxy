@@ -65,11 +65,17 @@ jobs:
             type=sha
             type=sha,format=long
 
-      - name: Build and tag images
+      - name: Build images
         run: |
           pack build ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
-            --tag ${{ steps.meta.outputs.tags }} \
             --builder gcr.io/buildpacks/builder:v1 \
             --env GOOGLE_FUNCTION_SIGNATURE_TYPE=http \
-            --env GOOGLE_FUNCTION_TARGET=ModProxy \
-            --publish
+            --env GOOGLE_FUNCTION_TARGET=ModProxy
+
+      - name: Tag and push images
+        run: |
+          echo "${{ steps.meta.outputs.tags }}" | while read tag
+          do
+            docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} $tag
+            docker push $tag
+          done
