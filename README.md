@@ -126,3 +126,58 @@ Retrieve the necessary DNS record information for the domain mappings:
 ```sh
 gcloud beta run domain-mappings describe --domain="$DOMAIN" --region="$REGION" --project="$PROJECT_ID"
 ```
+
+## Direct Workload Identity Federation
+
+Set up variables:
+
+```sh
+PROJECT_ID="go-modproxy"
+REPOSITORY="go-modproxy"
+SERVICE="go-modproxy"
+```
+
+Create a Workload Identity Pool and get its full ID:
+
+```sh
+gcloud iam workload-identity-pools create "github" \
+  --display-name="GitHub Actions Pool" \
+  --location="global" \
+  --project="$PROJECT_ID"
+
+WORKLOAD_IDENTITY_POOL_ID=$(gcloud iam workload-identity-pools describe "github" \
+  --project="${PROJECT_ID}" \
+  --location="global" \
+  --format="value(name)")
+```
+
+Create a Workload Identity Provider within the pool and get its resource name:
+
+```sh
+gcloud iam workload-identity-pools providers create-oidc "$REPOSITORY" \
+  --workload-identity-pool="github" \
+  --display-name="$REPOSITORY provider" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository" \
+  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --location="global" \
+  --project="$PROJECT_ID"
+
+# this is the field used for {workload_identity_provider} in google-github-actions/auth@v2
+WORKLOAD_IDENTITY_PROVIDER_ID=$(gcloud iam workload-identity-pools providers describe "$REPOSITORY" \
+  --workload-identity-pool="github" \
+  --project="$PROJECT_ID" \
+  --location="global" \
+  --format="value(name)")
+```
+
+```sh
+REPOSITORY="epiccoolguy/go-modproxy"
+SERVICE="go-modproxy"
+REGION="europe-west4"
+
+gcloud run services add-iam-policy-binding "$SERVICE" \
+  --member="principalSet://iam.googleapis.com/${WORKLOAD_IDENTITY_POOL_ID}/attribute.repository/${REPOSITORY}" \
+  --role="roles/run.admin" \
+  --region="$REGION" \
+  --project="$PROJECT_ID"
+```
