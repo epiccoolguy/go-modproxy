@@ -9,7 +9,7 @@ The behaviour of modproxy can be configured using the following environment vari
 - `HOST_PATTERN`: Specifies the pattern for host matching. Defaults to "go.loafoe.dev".
 - `HOST_REPLACEMENT`: Determines the replacement for the host. Defaults to "github.com".
 - `PATH_PATTERN`: Sets the pattern for path matching. Defaults to "/".
-- `PATH_REPLACEMENT`: Defines the replacement for the path. Defaults to "/loafoe-dev/go-".
+- `PATH_REPLACEMENT`: Defines the replacement for the path. Defaults to "/epiccoolguy/go-".
 
 ## Run locally
 
@@ -24,7 +24,7 @@ Confirm the url is correctly being rewritten:
 
 ```sh
 curl -H 'Host: go.loafoe.dev' localhost:8080/modproxy
-# Output: <html><head><meta name="go-import" content="go.loafoe.dev/modproxy git https://github.com/loafoe-dev/go-modproxy"></head><body></body></html>
+# Output: <html><head><meta name="go-import" content="go.loafoe.dev/modproxy git https://github.com/epiccoolguy/go-modproxy"></head><body></body></html>
 ```
 
 ## Run using `pack` and Docker
@@ -50,7 +50,7 @@ Confirm the url is correctly being rewritten:
 
 ```sh
 curl -H 'Host: go.loafoe.dev' localhost:8080/modproxy
-# Output: <html><head><meta name="go-import" content="go.loafoe.dev/modproxy git https://github.com/loafoe-dev/go-modproxy"></head><body></body></html>
+# Output: <html><head><meta name="go-import" content="go.loafoe.dev/modproxy git https://github.com/epiccoolguy/go-modproxy"></head><body></body></html>
 ```
 
 ## Run using Google Cloud Platform
@@ -64,6 +64,10 @@ PROJECT_ID="go-modproxy"
 CLOUDBUILD_BUCKET="gs://${PROJECT_ID}_cloudbuild"
 ARTIFACTS_REPOSITORY="cloud-run-source-deploy"
 REPOSITORY_URI=$REGION-docker.pkg.dev/$PROJECT_ID/$ARTIFACTS_REPOSITORY/$SERVICE
+HOST_PATTERN="go.loafoe.dev"
+HOST_REPLACEMENT="github.com"
+PATH_PATTERN="/"
+PATH_REPLACEMENT="/epiccoolguy/go-"
 
 # Create new GCP project
 gcloud projects create "$PROJECT_ID"
@@ -84,7 +88,7 @@ gcloud artifacts repositories create "$ARTIFACTS_REPOSITORY" --repository-format
 gcloud builds submit . --config cloudbuild.yaml --substitutions=_REPOSITORY_URI=$REPOSITORY_URI,COMMIT_SHA=$(git rev-parse HEAD) --region="$BUILD_REGION" --project="$PROJECT_ID"
 
 # Deploy service to Cloud Run
-gcloud run deploy "$SERVICE" --image="$REPOSITORY_URI:$(git rev-parse HEAD)" --no-allow-unauthenticated --region="$REGION" --project="$PROJECT_ID"
+gcloud run deploy "$SERVICE" --image="$REPOSITORY_URI:$(git rev-parse HEAD)" --set-env-vars="HOST_PATTERN=$HOST_PATTERN,HOST_REPLACEMENT=$HOST_REPLACEMENT,PATH_PATTERN=$PATH_PATTERN,PATH_REPLACEMENT=$PATH_REPLACEMENT" --no-allow-unauthenticated --region="$REGION" --project="$PROJECT_ID"
 ```
 
 Enable unauthenticated invocations in an organisation enforcing DRS using Resource Manager tags and a conditional DRS policy:
