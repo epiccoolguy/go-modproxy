@@ -49,11 +49,6 @@ jobs:
           workload_identity_provider: ${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER_ID }}
           service_account: "${{ secrets.GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT }}"
 
-      - name: "Set up Google Cloud SDK"
-        uses: "google-github-actions/setup-gcloud@v2"
-        with:
-          version: ">= 461.0.0"
-
       - name: "Deploy to Cloud Run"
         uses: "google-github-actions/deploy-cloudrun@v2"
         with:
