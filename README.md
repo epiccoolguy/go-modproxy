@@ -162,13 +162,20 @@ gcloud iam workload-identity-pools providers create-oidc "$REPOSITORY" \
   --location="global" \
   --project="$PROJECT_ID"
 
-# this is the field used for {workload_identity_provider} in google-github-actions/auth@v2 (GOOGLE_WORKLOAD_IDENTITY_PROVIDER_NAME in Github Secrets)
 WORKLOAD_IDENTITY_PROVIDER_ID=$(gcloud iam workload-identity-pools providers describe "$REPOSITORY" \
   --workload-identity-pool="github" \
   --project="$PROJECT_ID" \
   --location="global" \
   --format="value(name)")
 ```
+
+Add the identity provider as a Github repository secret for google-github-actions/auth@v2:
+
+```sh
+echo "$WORKLOAD_IDENTITY_PROVIDER_ID" | gh secret set GOOGLE_WORKLOAD_IDENTITY_PROVIDER_NAME --repo="epiccoolguy/go-modproxy"
+```
+
+Grant access to Google Cloud Run from the Github Actions Pool in a specific repository:
 
 ```sh
 REPOSITORY="epiccoolguy/go-modproxy"
@@ -180,4 +187,13 @@ gcloud run services add-iam-policy-binding "$SERVICE" \
   --role="roles/run.admin" \
   --region="$REGION" \
   --project="$PROJECT_ID"
+```
+
+## Setting up Github repository variables
+
+```sh
+echo "go.loafoe.dev" | gh variable set HOST_PATTERN --repo="epiccoolguy/go-modproxy"
+echo "github.com" | gh variable set HOST_REPLACEMENT --repo="epiccoolguy/go-modproxy"
+echo "/" | gh variable set PATH_PATTERN --repo="epiccoolguy/go-modproxy"
+echo "/epiccoolguy/go-" | gh variable set PATH_REPLACEMENT --repo="epiccoolguy/go-modproxy"
 ```
