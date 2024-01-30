@@ -33,14 +33,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # - name: Pull image
-      #   run: docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
+      - name: Pull image
+        run: docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
 
-      # - name: Tag image as latest
-      #   run: docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+      - name: Tag image as latest
+        run: docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
-      # - name: Push latest image
-      #   run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+      - name: Push latest image
+        run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
       - name: Log into Google Cloud Platform
         uses: "google-github-actions/auth@v2"
