@@ -57,7 +57,7 @@ jobs:
         run: |
           gcloud run deploy "$SERVICE" \
             --image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}" \
-            --set-env-vars="HOST_PATTERN=${{ env.HOST_PATTERN }},HOST_REPLACEMENT=${{ env.HOST_REPLACEMENT }},PATH_PATTERN=${{ env.PATH_PATTERN }},PATH_REPLACEMENT=${{ env.PATH_REPLACEMENT }}" \
+            --set-env-vars="HOST_PATTERN=${{ vars.HOST_PATTERN }},HOST_REPLACEMENT=${{ vars.HOST_REPLACEMENT }},PATH_PATTERN=${{ vars.PATH_PATTERN }},PATH_REPLACEMENT=${{ vars.PATH_REPLACEMENT }}" \
             --no-allow-unauthenticated \
             --region="$REGION" \
             --project="$PROJECT_ID"
