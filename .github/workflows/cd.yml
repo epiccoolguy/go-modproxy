@@ -47,7 +47,17 @@ jobs:
         with:
           project_id: "go-modproxy"
           workload_identity_provider: ${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER_NAME }}
+
       - name: "Set up Google Cloud SDK"
         uses: "google-github-actions/setup-gcloud@v2"
         with:
           version: ">= 461.0.0"
+
+      - name: "Deploy to Cloud Run"
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}" \
+            --set-env-vars="HOST_PATTERN=${{ env.HOST_PATTERN }},HOST_REPLACEMENT=${{ env.HOST_REPLACEMENT }},PATH_PATTERN=${{ env.PATH_PATTERN }},PATH_REPLACEMENT=${{ env.PATH_REPLACEMENT }}" \
+            --no-allow-unauthenticated \
+            --region="$REGION" \
+            --project="$PROJECT_ID"
