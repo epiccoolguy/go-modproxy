@@ -54,10 +54,14 @@ jobs:
           version: ">= 461.0.0"
 
       - name: "Deploy to Cloud Run"
-        run: |
-          gcloud run deploy ${{ vars.GOOGLE_SERVICE_NAME }} \
-            --image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}" \
-            --set-env-vars="HOST_PATTERN=${{ vars.HOST_PATTERN }},HOST_REPLACEMENT=${{ vars.HOST_REPLACEMENT }},PATH_PATTERN=${{ vars.PATH_PATTERN }},PATH_REPLACEMENT=${{ vars.PATH_REPLACEMENT }}" \
-            --no-allow-unauthenticated \
-            --region="${{ vars.GOOGLE_SERVICE_REGION }}" \
-            --project="${{ vars.GOOGLE_PROJECT_ID }}"
+        uses: "google-github-actions/deploy-cloudrun@v2"
+        with:
+          service: "hello-cloud-run"
+          image: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}"
+          env_vars: |
+            HOST_PATTERN=${{ vars.HOST_PATTERN }}
+            HOST_REPLACEMENT=${{ vars.HOST_REPLACEMENT }}
+            PATH_PATTERN=${{ vars.PATH_PATTERN }}
+            PATH_REPLACEMENT=${{ vars.PATH_REPLACEMENT }}
+          region: "${{ vars.GOOGLE_SERVICE_REGION }}"
+          project_id: "${{ vars.GOOGLE_PROJECT_ID }}"
