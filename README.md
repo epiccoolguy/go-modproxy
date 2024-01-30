@@ -56,33 +56,37 @@ curl -H 'Host: go.loafoe.dev' localhost:8080/modproxy
 ## Run using Google Cloud Platform
 
 ```sh
-SERVICE="go-modproxy"
-REGION="europe-west4"
-BUILD_REGION="europe-west1" # https://cloud.google.com/build/docs/locations#restricted_regions_for_some_projects
-BILLING_ACCOUNT_ID=$(gcloud billing accounts list --filter="OPEN = True" --format="value(ACCOUNT_ID)") # use first enabled billing account
-PROJECT_ID="go-modproxy"
-CLOUDBUILD_BUCKET="gs://${PROJECT_ID}_cloudbuild"
-ARTIFACTS_REPOSITORY="cloud-run-source-deploy"
-REPOSITORY_URI=$REGION-docker.pkg.dev/$PROJECT_ID/$ARTIFACTS_REPOSITORY/$SERVICE
 HOST_PATTERN="go.loafoe.dev"
 HOST_REPLACEMENT="github.com"
 PATH_PATTERN="/"
 PATH_REPLACEMENT="/epiccoolguy/go-"
 
+PROJECT_NAME="Go Module Proxy"
+PROJECT_PREFIX="go-modproxy"
+SERVICE="go-modproxy"
+REGION="europe-west4"
+BUILD_REGION="europe-west1"
+ARTIFACTS_REPOSITORY="cloud-run-source-deploy"
+
+PROJECT_ID=$(head /dev/urandom | LC_ALL=C tr -dc 0-9 | head -c4 | sed -e "s/^/${PROJECT_PREFIX}-/" | cut -c 1-30)
+CLOUDBUILD_BUCKET="gs://${PROJECT_ID}_cloudbuild"
+REPOSITORY_URI=${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACTS_REPOSITORY}/${SERVICE}
+BILLING_ACCOUNT_ID=$(gcloud billing accounts list --filter="OPEN = True" --format="value(ACCOUNT_ID)")
+
 # Create new GCP project
-gcloud projects create "$PROJECT_ID"
+gcloud projects create "${PROJECT_ID}" --name "${PROJECT_NAME}"
 
 # Link billing account
-gcloud billing projects link "$PROJECT_ID" --billing-account="$BILLING_ACCOUNT_ID"
+gcloud billing projects link "${PROJECT_ID}" --billing-account="${BILLING_ACCOUNT_ID}"
 
 # Enable required GCP services
-gcloud services enable artifactregistry.googleapis.com cloudbuild.googleapis.com run.googleapis.com --project="$PROJECT_ID"
+gcloud services enable artifactregistry.googleapis.com cloudbuild.googleapis.com run.googleapis.com iamcredentials.googleapis.com --project="${PROJECT_ID}"
 
 # Create GCS bucket for builds
-gcloud storage buckets create "$CLOUDBUILD_BUCKET" --location="$REGION" --project="$PROJECT_ID"
+gcloud storage buckets create "${CLOUDBUILD_BUCKET}" --location="${REGION}" --project="${PROJECT_ID}"
 
 # Create Docker artifact repository
-gcloud artifacts repositories create "$ARTIFACTS_REPOSITORY" --repository-format=docker --location="$REGION" --project="$PROJECT_ID"
+gcloud artifacts repositories create "${ARTIFACTS_REPOSITORY}" --repository-format=docker --location="${REGION}" --project="${PROJECT_ID}"
 
 # Submit build to Cloud Build
 gcloud builds submit . --config cloudbuild.yaml --substitutions=_REPOSITORY_URI=$REPOSITORY_URI,COMMIT_SHA=$(git rev-parse HEAD) --region="$BUILD_REGION" --project="$PROJECT_ID"
