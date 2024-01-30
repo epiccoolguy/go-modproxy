@@ -56,7 +56,7 @@ jobs:
       - name: "Deploy to Cloud Run"
         uses: "google-github-actions/deploy-cloudrun@v2"
         with:
-          service: "hello-cloud-run"
+          service: "${{ vars.GOOGLE_SERVICE_NAME }}"
           image: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}"
           env_vars: |
             HOST_PATTERN=${{ vars.HOST_PATTERN }}
