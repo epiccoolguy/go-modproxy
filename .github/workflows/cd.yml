@@ -47,7 +47,6 @@ jobs:
         with:
           project_id: "go-modproxy"
           workload_identity_provider: ${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER_ID }}
-          service_account: "${{ secrets.GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT }}"
 
       - name: "Deploy to Cloud Run"
         uses: "google-github-actions/deploy-cloudrun@v2"
