@@ -33,14 +33,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull image
-        run: docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
+      # - name: Pull image
+      #   run: docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
 
-      - name: Tag image as latest
-        run: docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+      # - name: Tag image as latest
+      #   run: docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
-      - name: Push latest image
-        run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+      # - name: Push latest image
+      #   run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
       - name: Log into Google Cloud Platform
         uses: "google-github-actions/auth@v2"
@@ -53,7 +53,7 @@ jobs:
         uses: "google-github-actions/deploy-cloudrun@v2"
         with:
           service: "${{ vars.GOOGLE_SERVICE_NAME }}"
-          image: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}"
+          image: "europe-west4-docker.pkg.dev/go-modproxy/cloud-run-source-deploy/go-modproxy:7eb8abafe58beafb1e2e597ac80c16f99b65bd6c" # todo: remove hardcoded image
           env_vars: |
             HOST_PATTERN=${{ vars.HOST_PATTERN }}
             HOST_REPLACEMENT=${{ vars.HOST_REPLACEMENT }}
