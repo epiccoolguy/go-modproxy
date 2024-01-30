@@ -46,7 +46,7 @@ jobs:
         uses: "google-github-actions/auth@v2"
         with:
           project_id: "go-modproxy"
-          workload_identity_provider: ${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER_NAME }}
+          workload_identity_provider: ${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER_ID }}
 
       - name: "Set up Google Cloud SDK"
         uses: "google-github-actions/setup-gcloud@v2"
@@ -55,7 +55,7 @@ jobs:
 
       - name: "Deploy to Cloud Run"
         run: |
-          gcloud run deploy "$SERVICE" \
+          gcloud run deploy ${{ vars.GOOGLE_PROJECT_ID }} \
             --image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}" \
             --set-env-vars="HOST_PATTERN=${{ vars.HOST_PATTERN }},HOST_REPLACEMENT=${{ vars.HOST_REPLACEMENT }},PATH_PATTERN=${{ vars.PATH_PATTERN }},PATH_REPLACEMENT=${{ vars.PATH_REPLACEMENT }}" \
             --no-allow-unauthenticated \
