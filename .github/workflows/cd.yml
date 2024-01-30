@@ -61,3 +61,4 @@ jobs:
             PATH_REPLACEMENT=${{ vars.PATH_REPLACEMENT }}
           region: "${{ vars.GOOGLE_SERVICE_REGION }}"
           project_id: "${{ vars.GOOGLE_PROJECT_ID }}"
+          flags: "--service-account=${{ secrets.GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT}}" # action does not expose this feature
