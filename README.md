@@ -105,7 +105,7 @@ gcloud artifacts repositories create "${ARTIFACTS_REPOSITORY}" --repository-form
 gcloud iam service-accounts create "${RUN_SERVICE_ACCOUNT_NAME}" --project "${PROJECT_ID}"
 
 # Add the intermediate service account as a Github repository secret for google-github-actions/auth@v2:
-echo "$GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT" | gh secret set GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT --repo="epiccoolguy/go-modproxy"
+echo "${GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT}" | gh secret set GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT --repo="epiccoolguy/go-modproxy"
 
 # Create a Workload Identity Pool
 gcloud iam workload-identity-pools create "githubactions" \
@@ -155,20 +155,20 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
 Enable unauthenticated invocations in an organisation enforcing DRS using Resource Manager tags and a conditional DRS policy:
 
 ```sh
-PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")
-ORGANIZATION_ID=$(gcloud projects describe "$PROJECT_ID" --format="value(parent.id)")
+PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format="value(projectNumber)")
+ORGANIZATION_ID=$(gcloud projects describe "${PROJECT_ID}" --format="value(parent.id)")
 
 gcloud resource-manager tags bindings create \
-  --tag-value="$ORGANIZATION_ID/allUsersIngress/True" \
-  --parent="//run.googleapis.com/projects/$PROJECT_NUMBER/locations/$REGION/services/$RUN_SERVICE" \
-  --location=$REGION
+  --tag-value="${ORGANIZATION_ID}/allUsersIngress/True" \
+  --parent="//run.googleapis.com/projects/${PROJECT_NUMBER}/locations/${REGION}/services/${RUN_SERVICE}" \
+  --location=${REGION}
 
 # This can fail until the binding has propagated
-gcloud run services add-iam-policy-binding "$RUN_SERVICE" \
+gcloud run services add-iam-policy-binding "${RUN_SERVICE}" \
   --member="allUsers" \
   --role="roles/run.invoker" \
-  --region="$REGION" \
-  --project="$PROJECT_ID"
+  --region="${REGION}" \
+  --project="${PROJECT_ID}"
 ```
 
 ---
@@ -179,11 +179,11 @@ Map the Cloud Run instance to a custom domain:
 DOMAIN="go.loafoe.dev"
 
 # It can take up to 30 minutes for Cloud Run to issue provision a certificate and route
-gcloud beta run domain-mappings create --service="$RUN_SERVICE" --domain="$DOMAIN" --region="$REGION" --project="$PROJECT_ID"
+gcloud beta run domain-mappings create --service="${RUN_SERVICE}" --domain="${DOMAIN}" --region="${REGION}" --project="${PROJECT_ID}"
 ```
 
 Retrieve the necessary DNS record information for the domain mappings:
 
 ```sh
-gcloud beta run domain-mappings describe --domain="$DOMAIN" --region="$REGION" --project="$PROJECT_ID"
+gcloud beta run domain-mappings describe --domain="${DOMAIN}" --region="${REGION}" --project="${PROJECT_ID}"
 ```
