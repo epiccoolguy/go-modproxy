@@ -162,7 +162,7 @@ gcloud iam workload-identity-pools providers create-oidc "$REPOSITORY" \
   --location="global" \
   --project="$PROJECT_ID"
 
-# this is the field used for {workload_identity_provider} in google-github-actions/auth@v2
+# this is the field used for {workload_identity_provider} in google-github-actions/auth@v2 (GOOGLE_WORKLOAD_IDENTITY_PROVIDER_NAME in Github Secrets)
 WORKLOAD_IDENTITY_PROVIDER_ID=$(gcloud iam workload-identity-pools providers describe "$REPOSITORY" \
   --workload-identity-pool="github" \
   --project="$PROJECT_ID" \
