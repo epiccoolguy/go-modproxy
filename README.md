@@ -150,6 +150,19 @@ gcloud iam service-accounts add-iam-policy-binding \
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:${GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT}" \
   --role="roles/run.developer"
+
+# Grant the intermediate service account access to Artifact Registry within the project
+gcloud artifacts repositories add-iam-policy-binding "${ARTIFACTS_REPOSITORY}" \
+  --member="serviceAccount:${GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT}" \
+  --role="roles/artifactregistry.writer" \
+  --location="${REGION}" \
+  --project="${PROJECT_ID}"
+
+# Grant the intermediate service account permission to "ActAs" itself to be able to deploy to Cloud Run.
+gcloud iam service-accounts add-iam-policy-binding ${GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT} \
+  --member="serviceAccount:${GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT}" \
+  --role="roles/iam.serviceAccountUser" \
+  --project="${PROJECT_ID}"
 ```
 
 Enable unauthenticated invocations in an organisation enforcing DRS using Resource Manager tags and a conditional DRS policy:
