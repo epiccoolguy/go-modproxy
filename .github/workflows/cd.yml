@@ -53,7 +53,7 @@ jobs:
         uses: "google-github-actions/deploy-cloudrun@v2"
         with:
           service: "${{ vars.GOOGLE_SERVICE_NAME }}"
-          image: "europe-west4-docker.pkg.dev/go-modproxy/cloud-run-source-deploy/go-modproxy:7eb8abafe58beafb1e2e597ac80c16f99b65bd6c" # todo: remove hardcoded image
+          image: "europe-west4-docker.pkg.dev/go-modproxy-9343/cloud-run-source-deploy/go-modproxy:5593c0f299a66b6c0353603b649ad68e74934e12" # todo: remove hardcoded image
           env_vars: |
             HOST_PATTERN=${{ vars.HOST_PATTERN }}
             HOST_REPLACEMENT=${{ vars.HOST_REPLACEMENT }}
