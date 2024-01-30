@@ -192,6 +192,8 @@ gcloud run services add-iam-policy-binding "$SERVICE" \
 ## Setting up Github repository variables
 
 ```sh
+echo "go-modproxy" | gh variable set GOOGLE_SERVICE_NAME --repo="epiccoolguy/go-modproxy"
+echo "europe-west4" | gh variable set GOOGLE_SERVICE_REGION --repo="epiccoolguy/go-modproxy"
 echo "go-modproxy" | gh variable set GOOGLE_PROJECT_ID --repo="epiccoolguy/go-modproxy"
 echo "go.loafoe.dev" | gh variable set HOST_PATTERN --repo="epiccoolguy/go-modproxy"
 echo "github.com" | gh variable set HOST_REPLACEMENT --repo="epiccoolguy/go-modproxy"

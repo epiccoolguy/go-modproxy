@@ -55,9 +55,9 @@ jobs:
 
       - name: "Deploy to Cloud Run"
         run: |
-          gcloud run deploy ${{ vars.GOOGLE_PROJECT_ID }} \
+          gcloud run deploy ${{ vars.GOOGLE_SERVICE_NAME }} \
             --image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}" \
             --set-env-vars="HOST_PATTERN=${{ vars.HOST_PATTERN }},HOST_REPLACEMENT=${{ vars.HOST_REPLACEMENT }},PATH_PATTERN=${{ vars.PATH_PATTERN }},PATH_REPLACEMENT=${{ vars.PATH_REPLACEMENT }}" \
             --no-allow-unauthenticated \
-            --region="$REGION" \
-            --project="$PROJECT_ID"
+            --region="${{ vars.GOOGLE_SERVICE_REGION }}" \
+            --project="${{ vars.GOOGLE_PROJECT_ID }}"
