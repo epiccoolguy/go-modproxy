@@ -63,15 +63,28 @@ PATH_REPLACEMENT="/epiccoolguy/go-"
 
 PROJECT_NAME="Go Module Proxy"
 PROJECT_PREFIX="go-modproxy"
-SERVICE="go-modproxy"
+RUN_SERVICE="go-modproxy"
 REGION="europe-west4"
 BUILD_REGION="europe-west1"
 ARTIFACTS_REPOSITORY="cloud-run-source-deploy"
+WORKLOAD_IDENTITY_PROVIDER_NAME="go-modproxy"
+GITHUB_REPOSITORY="epiccoolguy/go-modproxy"
+RUN_SERVICE_ACCOUNT_NAME="run-${RUN_SERVICE}"
+GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT="${RUN_SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 
 PROJECT_ID=$(head /dev/urandom | LC_ALL=C tr -dc 0-9 | head -c4 | sed -e "s/^/${PROJECT_PREFIX}-/" | cut -c 1-30)
 CLOUDBUILD_BUCKET="gs://${PROJECT_ID}_cloudbuild"
-REPOSITORY_URI=${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACTS_REPOSITORY}/${SERVICE}
+REPOSITORY_URI=${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACTS_REPOSITORY}/${RUN_SERVICE}
 BILLING_ACCOUNT_ID=$(gcloud billing accounts list --filter="OPEN = True" --format="value(ACCOUNT_ID)")
+
+# Add variables for the CD workflow to Github Repository Variables
+echo "${RUN_SERVICE}" | gh variable set GOOGLE_SERVICE_NAME --repo="epiccoolguy/go-modproxy"
+echo "${REGION}" | gh variable set GOOGLE_SERVICE_REGION --repo="epiccoolguy/go-modproxy"
+echo "${PROJECT_ID}" | gh variable set GOOGLE_PROJECT_ID --repo="epiccoolguy/go-modproxy"
+echo "${HOST_PATTERN}" | gh variable set HOST_PATTERN --repo="epiccoolguy/go-modproxy"
+echo "${HOST_REPLACEMENT}" | gh variable set HOST_REPLACEMENT --repo="epiccoolguy/go-modproxy"
+echo "${PATH_PATTERN}" | gh variable set PATH_PATTERN --repo="epiccoolguy/go-modproxy"
+echo "${PATH_REPLACEMENT}" | gh variable set PATH_REPLACEMENT --repo="epiccoolguy/go-modproxy"
 
 # Create new GCP project
 gcloud projects create "${PROJECT_ID}" --name "${PROJECT_NAME}"
@@ -88,11 +101,55 @@ gcloud storage buckets create "${CLOUDBUILD_BUCKET}" --location="${REGION}" --pr
 # Create Docker artifact repository
 gcloud artifacts repositories create "${ARTIFACTS_REPOSITORY}" --repository-format=docker --location="${REGION}" --project="${PROJECT_ID}"
 
-# Submit build to Cloud Build
-gcloud builds submit . --config cloudbuild.yaml --substitutions=_REPOSITORY_URI=$REPOSITORY_URI,COMMIT_SHA=$(git rev-parse HEAD) --region="$BUILD_REGION" --project="$PROJECT_ID"
+# Create an intermediate service account for the workload identity pool to impersonate.
+gcloud iam service-accounts create "${RUN_SERVICE_ACCOUNT_NAME}" --project "${PROJECT_ID}"
 
-# Deploy service to Cloud Run
-gcloud run deploy "$SERVICE" --image="$REPOSITORY_URI:$(git rev-parse HEAD)" --set-env-vars="HOST_PATTERN=$HOST_PATTERN,HOST_REPLACEMENT=$HOST_REPLACEMENT,PATH_PATTERN=$PATH_PATTERN,PATH_REPLACEMENT=$PATH_REPLACEMENT" --no-allow-unauthenticated --region="$REGION" --project="$PROJECT_ID"
+# Add the intermediate service account as a Github repository secret for google-github-actions/auth@v2:
+echo "$GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT" | gh secret set GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT --repo="epiccoolguy/go-modproxy"
+
+# Create a Workload Identity Pool
+gcloud iam workload-identity-pools create "githubactions" \
+  --display-name="GitHub Actions Pool" \
+  --location="global" \
+  --project="${PROJECT_ID}"
+
+# Get the full id of the pool
+WORKLOAD_IDENTITY_POOL_ID=$(gcloud iam workload-identity-pools describe "githubactions" \
+  --project="${PROJECT_ID}" \
+  --location="global" \
+  --format="value(name)")
+
+# Create a Workload Identity Provider within the pool
+gcloud iam workload-identity-pools providers create-oidc "${WORKLOAD_IDENTITY_PROVIDER_NAME}" \
+  --workload-identity-pool="githubactions" \
+  --display-name="${GITHUB_REPOSITORY} provider" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository" \
+  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --location="global" \
+  --project="${PROJECT_ID}"
+
+# Get the full id of the provider
+WORKLOAD_IDENTITY_PROVIDER_ID=$(gcloud iam workload-identity-pools providers describe "${WORKLOAD_IDENTITY_PROVIDER_NAME}" \
+  --workload-identity-pool="githubactions" \
+  --project="${PROJECT_ID}" \
+  --location="global" \
+  --format="value(name)")
+
+# Add the identity provider as a Github repository secret for google-github-actions/auth@v2
+echo "${WORKLOAD_IDENTITY_PROVIDER_ID}" | gh secret set GOOGLE_WORKLOAD_IDENTITY_PROVIDER_ID --repo="epiccoolguy/go-modproxy"
+
+# Grant the Github Actions Pool access to the intermediate service account in a specific repository
+PRINCIPAL="principalSet://iam.googleapis.com/${WORKLOAD_IDENTITY_POOL_ID}/attribute.repository/${GITHUB_REPOSITORY}"
+gcloud iam service-accounts add-iam-policy-binding \
+  "${GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT}" \
+  --member="${PRINCIPAL}" \
+  --role="roles/iam.workloadIdentityUser" \
+  --project="${PROJECT_ID}"
+
+# Grant the intermediate service account access to Cloud Run within the project
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT}" \
+  --role="roles/run.developer"
 ```
 
 Enable unauthenticated invocations in an organisation enforcing DRS using Resource Manager tags and a conditional DRS policy:
@@ -103,11 +160,11 @@ ORGANIZATION_ID=$(gcloud projects describe "$PROJECT_ID" --format="value(parent.
 
 gcloud resource-manager tags bindings create \
   --tag-value="$ORGANIZATION_ID/allUsersIngress/True" \
-  --parent="//run.googleapis.com/projects/$PROJECT_NUMBER/locations/$REGION/services/$SERVICE" \
+  --parent="//run.googleapis.com/projects/$PROJECT_NUMBER/locations/$REGION/services/$RUN_SERVICE" \
   --location=$REGION
 
 # This can fail until the binding has propagated
-gcloud run services add-iam-policy-binding "$SERVICE" \
+gcloud run services add-iam-policy-binding "$RUN_SERVICE" \
   --member="allUsers" \
   --role="roles/run.invoker" \
   --region="$REGION" \
@@ -122,85 +179,11 @@ Map the Cloud Run instance to a custom domain:
 DOMAIN="go.loafoe.dev"
 
 # It can take up to 30 minutes for Cloud Run to issue provision a certificate and route
-gcloud beta run domain-mappings create --service="$SERVICE" --domain="$DOMAIN" --region="$REGION" --project="$PROJECT_ID"
+gcloud beta run domain-mappings create --service="$RUN_SERVICE" --domain="$DOMAIN" --region="$REGION" --project="$PROJECT_ID"
 ```
 
 Retrieve the necessary DNS record information for the domain mappings:
 
 ```sh
 gcloud beta run domain-mappings describe --domain="$DOMAIN" --region="$REGION" --project="$PROJECT_ID"
-```
-
-## Direct Workload Identity Federation
-
-Set up variables:
-
-```sh
-PROJECT_ID="go-modproxy"
-REPOSITORY="go-modproxy"
-SERVICE="go-modproxy"
-```
-
-Create a Workload Identity Pool and get its full ID:
-
-```sh
-gcloud iam workload-identity-pools create "github" \
-  --display-name="GitHub Actions Pool" \
-  --location="global" \
-  --project="$PROJECT_ID"
-
-WORKLOAD_IDENTITY_POOL_ID=$(gcloud iam workload-identity-pools describe "github" \
-  --project="${PROJECT_ID}" \
-  --location="global" \
-  --format="value(name)")
-```
-
-Create a Workload Identity Provider within the pool and get its resource name:
-
-```sh
-gcloud iam workload-identity-pools providers create-oidc "$REPOSITORY" \
-  --workload-identity-pool="github" \
-  --display-name="$REPOSITORY provider" \
-  --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository" \
-  --issuer-uri="https://token.actions.githubusercontent.com" \
-  --location="global" \
-  --project="$PROJECT_ID"
-
-WORKLOAD_IDENTITY_PROVIDER_ID=$(gcloud iam workload-identity-pools providers describe "$REPOSITORY" \
-  --workload-identity-pool="github" \
-  --project="$PROJECT_ID" \
-  --location="global" \
-  --format="value(name)")
-```
-
-Add the identity provider as a Github repository secret for google-github-actions/auth@v2:
-
-```sh
-echo "$WORKLOAD_IDENTITY_PROVIDER_ID" | gh secret set GOOGLE_WORKLOAD_IDENTITY_PROVIDER_ID --repo="epiccoolguy/go-modproxy"
-```
-
-Grant access to Google Cloud Run from the Github Actions Pool in a specific repository:
-
-```sh
-REPOSITORY="epiccoolguy/go-modproxy"
-SERVICE="go-modproxy"
-REGION="europe-west4"
-
-gcloud run services add-iam-policy-binding "$SERVICE" \
-  --member="principalSet://iam.googleapis.com/${WORKLOAD_IDENTITY_POOL_ID}/attribute.repository/${REPOSITORY}" \
-  --role="roles/run.admin" \
-  --region="$REGION" \
-  --project="$PROJECT_ID"
-```
-
-## Setting up Github repository variables
-
-```sh
-echo "go-modproxy" | gh variable set GOOGLE_SERVICE_NAME --repo="epiccoolguy/go-modproxy"
-echo "europe-west4" | gh variable set GOOGLE_SERVICE_REGION --repo="epiccoolguy/go-modproxy"
-echo "go-modproxy" | gh variable set GOOGLE_PROJECT_ID --repo="epiccoolguy/go-modproxy"
-echo "go.loafoe.dev" | gh variable set HOST_PATTERN --repo="epiccoolguy/go-modproxy"
-echo "github.com" | gh variable set HOST_REPLACEMENT --repo="epiccoolguy/go-modproxy"
-echo "/" | gh variable set PATH_PATTERN --repo="epiccoolguy/go-modproxy"
-echo "/epiccoolguy/go-" | gh variable set PATH_REPLACEMENT --repo="epiccoolguy/go-modproxy"
 ```
