@@ -14,7 +14,7 @@ env:
   GHCR_REGISTRY: ghcr.io
   GAR_REGISTRY: ${{ vars.GAR_LOCATION }}-docker.pkg.dev
   GHCR_IMAGE_NAME: ${{ github.repository }}
-  GAR_IMAGE_NAME: ${{ vars.GOOGLE_PROJECT_ID }}/${{ secrets.GAR_REPOSITORY }}/${{ github.repository }}
+  GAR_IMAGE_NAME: ${{ vars.GCP_PROJECT_ID }}/${{ vars.GAR_REPOSITORY }}/${{ github.repository }}
   TAG: sha-${{ github.sha }}
 
 jobs:
@@ -39,8 +39,8 @@ jobs:
         uses: "google-github-actions/auth@v2"
         with:
           project_id: "go-modproxy"
-          workload_identity_provider: ${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER_ID }}
-          service_account: "${{ secrets.GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT }}"
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER_ID }}
+          service_account: "${{ secrets.WIF_SERVICE_ACCOUNT }}"
 
       - name: "Set up Google Cloud SDK"
         uses: "google-github-actions/setup-gcloud@v2"
@@ -49,7 +49,7 @@ jobs:
 
       - name: "Get Google Artifacts Registry credentials"
         run: |
-          gcloud auth configure-docker "${{ vars.GOOGLE_SERVICE_REGION }}-docker.pkg.dev" --quiet
+          gcloud auth configure-docker "${{ vars.GCR_REGION }}-docker.pkg.dev" --quiet
 
       - name: Pull image built by CI
         env:
@@ -78,13 +78,13 @@ jobs:
         env:
           GAR_IMAGE: ${{ env.GAR_REGISTRY }}/${{ env.GAR_IMAGE_NAME }}:${{ env.TAG }}
         with:
-          service: "${{ vars.GOOGLE_SERVICE_NAME }}"
+          service: "${{ vars.GCR_SERVICE }}"
           image: "${{ env.GAR_IMAGE }}"
           env_vars: |
             HOST_PATTERN=${{ vars.HOST_PATTERN }}
             HOST_REPLACEMENT=${{ vars.HOST_REPLACEMENT }}
             PATH_PATTERN=${{ vars.PATH_PATTERN }}
             PATH_REPLACEMENT=${{ vars.PATH_REPLACEMENT }}
-          region: "${{ vars.GOOGLE_SERVICE_REGION }}"
-          project_id: "${{ vars.GOOGLE_PROJECT_ID }}"
-          flags: "--service-account=${{ secrets.GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT}}" # action does not expose this feature
+          region: "${{ vars.GCR_REGION }}"
+          project_id: "${{ vars.GCP_PROJECT_ID }}"
+          flags: "--service-account=${{ secrets.WIF_SERVICE_ACCOUNT}}" # action does not expose this feature
