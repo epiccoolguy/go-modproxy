@@ -11,8 +11,10 @@ on:
 
 env:
   GO_VERSION: ^1.21.5
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  GHCR_REGISTRY: ghcr.io
+  GAR_REGISTRY: ${{ vars.GAR_LOCATION }}-docker.pkg.dev
+  GHCR_IMAGE_NAME: ${{ github.repository }}
+  GAR_IMAGE_NAME: ${{ vars.GOOGLE_PROJECT_ID }}/${{ secrets.GAR_REPOSITORY }}/${{ github.repository }}
   TAG: sha-${{ github.sha }}
 
 jobs:
@@ -20,40 +22,62 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: "read"
-      packages: write
+      packages: "write"
       id-token: "write"
     steps:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Login to GitHub Container Registry
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ${{ env.GHCR_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull image
-        run: docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
-
-      - name: Tag image as latest
-        run: docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
-      - name: Push latest image
-        run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
-      - name: Log into Google Cloud Platform
+      - name: Log in to Google Cloud Platform
         uses: "google-github-actions/auth@v2"
         with:
           project_id: "go-modproxy"
           workload_identity_provider: ${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER_ID }}
           service_account: "${{ secrets.GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT }}"
 
+      - name: "Set up Google Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@v2"
+        with:
+          version: ">= 461.0.0"
+
+      - name: "Get Google Artifacts Registry credentials"
+        run: |
+          gcloud auth configure-docker "${{ vars.GOOGLE_SERVICE_REGION }}-docker.pkg.dev" --quiet
+
+      - name: Pull image built by CI
+        env:
+          IMAGE: ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE_NAME }}:${{ env.TAG }}
+        run: docker pull ${{ env.IMAGE }}
+
+      - name: Tag image as latest for GHCR and specific for GAR
+        env:
+          IMAGE: ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE_NAME }}:${{ env.TAG }}
+          GHCR_IMAGE: ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE_NAME }}:latest
+          GAR_IMAGE: ${{ env.GAR_REGISTRY }}/${{ env.GAR_IMAGE_NAME }}:${{ env.TAG }}
+        run: |
+          docker tag ${{ env.IMAGE }} ${{ env.GHCR_IMAGE }}
+          docker tag ${{ env.IMAGE }} ${{ env.GAR_IMAGE }}
+
+      - name: Push images to GHCR and GAR
+        env:
+          GHCR_IMAGE: ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE_NAME }}:latest
+          GAR_IMAGE: ${{ env.GAR_REGISTRY }}/${{ env.GAR_IMAGE_NAME }}:${{ env.TAG }}
+        run: |
+          docker push ${{ env.GHCR_IMAGE }}
+          docker push ${{ env.GAR_IMAGE }}
+
       - name: "Deploy to Cloud Run"
         uses: "google-github-actions/deploy-cloudrun@v2"
         with:
           service: "${{ vars.GOOGLE_SERVICE_NAME }}"
-          image: "europe-west4-docker.pkg.dev/go-modproxy-9343/cloud-run-source-deploy/go-modproxy:5593c0f299a66b6c0353603b649ad68e74934e12" # todo: remove hardcoded image
+          image: "${{ env.GAR_IMAGE_NAME }}"
           env_vars: |
             HOST_PATTERN=${{ vars.HOST_PATTERN }}
             HOST_REPLACEMENT=${{ vars.HOST_REPLACEMENT }}
