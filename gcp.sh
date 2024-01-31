@@ -166,7 +166,6 @@ echo "${HOST_PATTERN}" | gh variable set HOST_PATTERN --repo="epiccoolguy/go-mod
 echo "${HOST_REPLACEMENT}" | gh variable set HOST_REPLACEMENT --repo="epiccoolguy/go-modproxy"
 echo "${PATH_PATTERN}" | gh variable set PATH_PATTERN --repo="epiccoolguy/go-modproxy"
 echo "${PATH_REPLACEMENT}" | gh variable set PATH_REPLACEMENT --repo="epiccoolguy/go-modproxy"
-echo "${GCP_PROJECT_REGION}" | gh variable set GCP_PROJECT_REGION --repo="epiccoolguy/go-modproxy"
 echo "${GCP_PROJECT_ID}" | gh variable set GCP_PROJECT_ID --repo="epiccoolguy/go-modproxy"
 echo "${GAR_REPOSITORY}" | gh variable set GAR_REPOSITORY --repo="epiccoolguy/go-modproxy"
 echo "${GAR_LOCATION}" | gh variable set GAR_LOCATION --repo="epiccoolguy/go-modproxy"
