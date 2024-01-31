@@ -1,8 +1,6 @@
 name: CD
 
 on:
-  pull_request:
-    branches: [master] # Temporary trigger
   workflow_run:
     workflows: [CI]
     branches: [master]
