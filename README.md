@@ -66,7 +66,7 @@ PROJECT_PREFIX="go-modproxy"
 RUN_SERVICE="go-modproxy"
 REGION="europe-west4"
 BUILD_REGION="europe-west1"
-ARTIFACTS_REPOSITORY="cloud-run-source-deploy"
+GAR_REPOSITORY="cloud-run-source-deploy"
 WORKLOAD_IDENTITY_PROVIDER_NAME="go-modproxy"
 GITHUB_REPOSITORY="epiccoolguy/go-modproxy"
 RUN_SERVICE_ACCOUNT_NAME="run-${RUN_SERVICE}"
@@ -74,7 +74,7 @@ GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT="${RUN_SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.
 
 PROJECT_ID=$(head /dev/urandom | LC_ALL=C tr -dc 0-9 | head -c4 | sed -e "s/^/${PROJECT_PREFIX}-/" | cut -c 1-30)
 CLOUDBUILD_BUCKET="gs://${PROJECT_ID}_cloudbuild"
-REPOSITORY_URI=${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACTS_REPOSITORY}/${RUN_SERVICE}
+REPOSITORY_URI=${REGION}-docker.pkg.dev/${PROJECT_ID}/${GAR_REPOSITORY}/${RUN_SERVICE}
 BILLING_ACCOUNT_ID=$(gcloud billing accounts list --filter="OPEN = True" --format="value(ACCOUNT_ID)")
 
 # Add variables for the CD workflow to Github Repository Variables
@@ -99,7 +99,10 @@ gcloud services enable artifactregistry.googleapis.com cloudbuild.googleapis.com
 gcloud storage buckets create "${CLOUDBUILD_BUCKET}" --location="${REGION}" --project="${PROJECT_ID}"
 
 # Create Docker artifact repository
-gcloud artifacts repositories create "${ARTIFACTS_REPOSITORY}" --repository-format=docker --location="${REGION}" --project="${PROJECT_ID}"
+gcloud artifacts repositories create "${GAR_REPOSITORY}" --repository-format=docker --location="${REGION}" --project="${PROJECT_ID}"
+
+# Add the Docker artifact repository as a Github repository secret.
+echo "${GAR_REPOSITORY}" | gh secret set GAR_REPOSITORY --repo="epiccoolguy/go-modproxy"
 
 # Create an intermediate service account for the workload identity pool to impersonate.
 gcloud iam service-accounts create "${RUN_SERVICE_ACCOUNT_NAME}" --project "${PROJECT_ID}"
@@ -152,7 +155,7 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --role="roles/run.developer"
 
 # Grant the intermediate service account access to Artifact Registry within the project
-gcloud artifacts repositories add-iam-policy-binding "${ARTIFACTS_REPOSITORY}" \
+gcloud artifacts repositories add-iam-policy-binding "${GAR_REPOSITORY}" \
   --member="serviceAccount:${GOOGLE_CLOUD_RUN_SERVICE_ACCOUNT}" \
   --role="roles/artifactregistry.writer" \
   --location="${REGION}" \
