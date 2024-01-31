@@ -3,14 +3,16 @@ name: CD
 on:
   workflow_run:
     workflows: [CI]
-    branches: [add-cd]
+    branches: [master]
     types:
       - completed
 
 env:
   GO_VERSION: ^1.21.5
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  GHCR_REGISTRY: ghcr.io
+  GAR_REGISTRY: ${{ vars.GAR_LOCATION }}-docker.pkg.dev
+  GHCR_IMAGE_NAME: ${{ github.repository }}
+  GAR_IMAGE_NAME: ${{ vars.GCP_PROJECT_ID }}/${{ vars.GAR_REPOSITORY }}/${{ github.repository }}
   TAG: sha-${{ github.sha }}
 
 jobs:
@@ -18,35 +20,69 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: "read"
-      packages: write
+      packages: "write"
       id-token: "write"
     steps:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Login to GitHub Container Registry
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ${{ env.GHCR_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull image
-        run: docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-
-      - name: Tag image as latest
-        run: docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
-      - name: Push latest image
-        run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
-      - name: Log into Google Cloud Platform
+      - name: Log in to Google Cloud Platform
         uses: "google-github-actions/auth@v2"
         with:
           project_id: "go-modproxy"
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER_ID }}
+          service_account: "${{ secrets.WIF_SERVICE_ACCOUNT }}"
 
       - name: "Set up Google Cloud SDK"
         uses: "google-github-actions/setup-gcloud@v2"
         with:
           version: ">= 461.0.0"
+
+      - name: "Get Google Artifacts Registry credentials"
+        run: |
+          gcloud auth configure-docker "${{ vars.GCR_REGION }}-docker.pkg.dev" --quiet
+
+      - name: Pull image built by CI
+        env:
+          IMAGE: ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE_NAME }}:${{ env.TAG }}
+        run: docker pull ${{ env.IMAGE }}
+
+      - name: Tag image as latest for GHCR and specific for GAR
+        env:
+          IMAGE: ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE_NAME }}:${{ env.TAG }}
+          GHCR_IMAGE: ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE_NAME }}:latest
+          GAR_IMAGE: ${{ env.GAR_REGISTRY }}/${{ env.GAR_IMAGE_NAME }}:${{ env.TAG }}
+        run: |
+          docker tag ${{ env.IMAGE }} ${{ env.GHCR_IMAGE }}
+          docker tag ${{ env.IMAGE }} ${{ env.GAR_IMAGE }}
+
+      - name: Push images to GHCR and GAR
+        env:
+          GHCR_IMAGE: ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE_NAME }}:latest
+          GAR_IMAGE: ${{ env.GAR_REGISTRY }}/${{ env.GAR_IMAGE_NAME }}:${{ env.TAG }}
+        run: |
+          docker push ${{ env.GHCR_IMAGE }}
+          docker push ${{ env.GAR_IMAGE }}
+
+      - name: "Deploy to Cloud Run"
+        uses: "google-github-actions/deploy-cloudrun@v2"
+        env:
+          GAR_IMAGE: ${{ env.GAR_REGISTRY }}/${{ env.GAR_IMAGE_NAME }}:${{ env.TAG }}
+        with:
+          service: "${{ vars.GCR_SERVICE }}"
+          image: "${{ env.GAR_IMAGE }}"
+          env_vars: |
+            HOST_PATTERN=${{ vars.HOST_PATTERN }}
+            HOST_REPLACEMENT=${{ vars.HOST_REPLACEMENT }}
+            PATH_PATTERN=${{ vars.PATH_PATTERN }}
+            PATH_REPLACEMENT=${{ vars.PATH_REPLACEMENT }}
+          region: "${{ vars.GCR_REGION }}"
+          project_id: "${{ vars.GCP_PROJECT_ID }}"
+          flags: "--service-account=${{ secrets.WIF_SERVICE_ACCOUNT}}" # action does not expose this feature
